@@ -340,15 +340,27 @@ namespace LibraryConsole
             string author = Console.ReadLine() ?? string.Empty;
 
             Console.Write("Enter the new isbn of the book: ");
-            string isbn = Console.ReadLine() ?? string.Empty;
+            string isbn;
+            var book = new Book();
+            do
+            {
+                isbn = Console.ReadLine() ?? string.Empty;
+                book = context.Books.FirstOrDefault(x => x.ISBN == isbn);
+                if (book != null)
+                {
+                    Console.Write("Please use another ISBN, this one is already assigned to the book:\n");
+                    Console.WriteLine(book.ToString());
+                }
+            }
+            while (book != null);
 
             Console.Write("Enter the new year published of the book: ");
             int yearPublished;
-            while (!int.TryParse(Console.ReadLine(), out yearPublished) || yearPublished <= 1600 || yearPublished >= DateTime.Now.Year)
+            while (!int.TryParse(Console.ReadLine(), out yearPublished) || yearPublished < 1600 || yearPublished > DateTime.Now.Year)
             {
                 Console.WriteLine("Please enter a valid year (greater than 1600 and less or equal than the current year).");
             }
-
+                        
             targetBook.Title = title;
             targetBook.Author = author;
             targetBook.YearPublished = yearPublished;
