@@ -33,7 +33,7 @@ namespace LibraryDomain
         }
 
         public override string ToString() {
-            return $"{Title}, {Author}, {YearPublished}, {IssueNumber}";
+            return ($"ID: {Id} Title: {Title}, Author: {Author}, Year Published: {YearPublished}, IssueNumber: {IssueNumber}");
 
         }
     }

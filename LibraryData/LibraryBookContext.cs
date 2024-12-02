@@ -1,5 +1,6 @@
 ﻿using LibraryDomain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -11,17 +12,45 @@ namespace LibraryData
 {
     public class LibraryBookContext : DbContext
     {
+        //may be it is for migration
+        public LibraryBookContext() : base()
+        {
+        }
+        public LibraryBookContext(DbContextOptions options) : base(options)
+        {
+        }
+
         public DbSet<LibraryItem> LibraryItems { get; set; }
         public DbSet<Book> Books { get; set; }
-        public DbSet<Magazine> Pies { get; set; }
+        public DbSet<Magazine> Magazines { get; set; }
         public DbSet<EBook> EBooks { get; set; }
+        public DbSet<BorrowTransaction> BorrowTransactions { get; set; }
+        public LibraryBookContext(DbContextOptions<LibraryBookContext> options)
+            : base(options)
+        { }
+
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer("Data Source = (localdb)\\MSSQLLocalDB; Initial Catalog = LibraryDatabase");
-                //.LogTo(Console.WriteLine, new[] { DbLoggerCategory.Database.Command.Name },
-                // LogLevel.Information)
-                //.EnableSensitiveDataLogging();
+            var currentDirectory = Directory.GetCurrentDirectory();
+            var basePath = Path.Combine(currentDirectory, "..", "..", "..");
+
+            //used only for migration
+            //var basePath = Path.Combine(currentDirectory);
+
+            var configuration = new ConfigurationBuilder()
+            .SetBasePath(basePath)
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .Build();
+
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            optionsBuilder.UseSqlServer(connectionString);
+
+
+            //optionsBuilder.UseSqlServer("Data Source = (localdb)\\MSSQLLocalDB; Initial Catalog = LibraryDatabase");
+            //.LogTo(Console.WriteLine, new[] { DbLoggerCategory.Database.Command.Name },
+            // LogLevel.Information)
+            //.EnableSensitiveDataLogging();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -41,6 +70,12 @@ namespace LibraryData
             modelBuilder.Entity<EBook>()
                 .ToTable("EBooks")        // EBook-specific table
                 .HasBaseType<LibraryItem>(); // EBook inherits from LibraryItem
+
+            modelBuilder.Entity<BorrowTransaction>()
+            .HasOne(bt => bt.LibraryItem)
+            .WithMany()  // A LibraryItem can be borrowed many times
+            .HasForeignKey(bt => bt.LibraryItemId)
+            .OnDelete(DeleteBehavior.Restrict);  // Restrict deletion to prevent deleting a LibraryItem that's in a transaction
         }
     }
 }

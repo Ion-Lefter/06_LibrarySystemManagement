@@ -9,8 +9,8 @@ namespace LibraryDomain
     public abstract class LibraryItem
     {
         public int Id { get; set; }
-        public string Title { get; protected set; }
-        public string Author { get; protected set; }
+        public string Title { get; set; }
+        public string Author { get; set; }
         public int YearPublished { get; set; }
 
         //[JsonDiscriminator] // Optional to support type differentiation in JSON

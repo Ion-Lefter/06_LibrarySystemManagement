@@ -47,7 +47,7 @@ namespace LibraryDomain
 
         public override string ToString()
         {
-            return $"{Title}, {Author}, {ISBN}, {YearPublished}";
+            return $"ID:{Id}    Title:{Title}  Author:{Author}    Year Published:{YearPublished}    ISBN:{ISBN}";
         }
     }
 }
