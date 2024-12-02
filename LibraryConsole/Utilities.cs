@@ -1,6 +1,7 @@
 ﻿
 using LibraryData;
 using LibraryDomain;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System;
@@ -115,11 +116,12 @@ namespace LibraryConsole
 
                 Console.WriteLine("1: View details of books");
                 Console.WriteLine("2: Add new book");
-                Console.WriteLine("3: Search book by title");
+                Console.WriteLine("3: Search book by Title");
                 Console.WriteLine("4: Borrow Book");
                 Console.WriteLine("5: Return Book");
                 Console.WriteLine("6: Edit Detailes of Book");
                 Console.WriteLine("7: Delete Book by Id");
+                Console.WriteLine("8: Search book by Author");
                 Console.WriteLine("0: Back");
 
                 Console.Write("Your selection: ");
@@ -150,6 +152,9 @@ namespace LibraryConsole
                         break;
                     case "7":
                         ShowDeleteItemById<Book>();
+                        break;
+                    case "8":
+                        ShowFilterBooksByAuthor();
                         break;
                     case "0":
                         ShowLibraryManagementMenuAll();
@@ -357,6 +362,64 @@ namespace LibraryConsole
             Console.WriteLine("Press press enter to continue");
             Console.ReadLine();
 
+        }
+
+        private static async void ShowFilterBooksByAuthor()
+        {
+
+            Console.WriteLine("Please enter the Author of the book:");
+            string authorOfTheBook = Console.ReadLine();
+
+            var filteredBooks = await SearchBooksByAuthorAsync(authorOfTheBook);
+
+            if (filteredBooks.Count > 0)
+            {
+                foreach (var book in filteredBooks)
+                {
+                    Console.WriteLine(book.ToString());
+                }
+            }
+            else
+            {
+                Console.WriteLine("No book was found with this Author!");
+            }
+
+            Console.WriteLine("Press press enter to continue");
+            Console.ReadLine();
+
+        }
+
+        public static async Task<List<Book>> SearchBooksByAuthorAsync(string authorOfTheBook)
+        {
+            // Raw SQL query to filter books by title
+            var query = @"
+                SELECT 
+                        li.Id,
+                        li.Title,
+                        li.Author,
+                        li.YearPublished,
+		                b.ISBN
+                    FROM 
+                        LibraryItems li
+                    INNER JOIN 
+                        Books b ON li.Id = b.Id
+                    WHERE 
+                        li.Author LIKE '%' + @Author + '%';";
+
+            // Execute the raw SQL query
+            var filteredBooks = new List<Book>();
+            try {
+                var rawResults = await context.Database.SqlQueryRaw<Book>(
+                        query, new SqlParameter("@Author", $"%{authorOfTheBook}%")
+                    ).ToListAsync();
+                filteredBooks.AddRange(rawResults);
+            } 
+            catch(Exception ex) { 
+                Console.WriteLine(ex.ToString());
+            }
+
+
+            return filteredBooks;
         }
 
         private static void ShowBorrowBook() {

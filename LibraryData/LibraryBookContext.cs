@@ -13,9 +13,9 @@ namespace LibraryData
     public class LibraryBookContext : DbContext
     {
         //may be it is for migration
-        public LibraryBookContext() : base()
-        {
-        }
+        //public LibraryBookContext() : base()
+        //{
+        //}
         public LibraryBookContext(DbContextOptions options) : base(options)
         {
         }
