@@ -118,10 +118,11 @@ namespace LibraryConsole
                 Console.WriteLine("2: Add new book");
                 Console.WriteLine("3: Search book by Title");
                 Console.WriteLine("4: Borrow Book");
-                Console.WriteLine("5: Return Book");
-                Console.WriteLine("6: Edit Detailes of Book");
-                Console.WriteLine("7: Delete Book by Id");
+                Console.WriteLine("5: Return book");
+                Console.WriteLine("6: Edit detailes of book");
+                Console.WriteLine("7: Delete book by Id");
                 Console.WriteLine("8: Search book by Author");
+                Console.WriteLine("9: Show Transactions");
                 Console.WriteLine("0: Back");
 
                 Console.Write("Your selection: ");
@@ -155,6 +156,9 @@ namespace LibraryConsole
                         break;
                     case "8":
                         ShowFilterBooksByAuthor();
+                        break;                    
+                    case "9":
+                        ShowBookTransactions();
                         break;
                     case "0":
                         ShowLibraryManagementMenuAll();
@@ -236,6 +240,7 @@ namespace LibraryConsole
                 Console.WriteLine("1: View details of Magazines");
                 Console.WriteLine("2: Borrow Magazine");
                 Console.WriteLine("3: Return Magazine");
+                Console.WriteLine("4: Show Transactions");
                 Console.WriteLine("0: Back");
 
                 Console.Write("Your selection: ");
@@ -251,7 +256,10 @@ namespace LibraryConsole
                         ShowBorrowMagazine();
                         break;
                     case "3":
-                        ShowBorrowMagazine();
+                        ShowReturnMagazine();
+                        break;                    
+                    case "4":
+                        ShowMagazineTransactions();
                         break;
                     case "0":
                         ShowLibraryManagementMenuAll();
@@ -270,20 +278,32 @@ namespace LibraryConsole
         {
             Book? newBook = null;
 
-            Console.Write("Enter the name of the book: ");
+            Console.Write("Enter the Title of the book: ");
             string name = Console.ReadLine() ?? string.Empty;
 
-            Console.Write("Enter the author of the book: ");
+            Console.Write("Enter the Author of the book: ");
             string author = Console.ReadLine() ?? string.Empty;
 
-            Console.Write("Enter the isbn of the book: ");
-            string isbn = Console.ReadLine() ?? string.Empty;
+            Console.Write("Enter the ISBN of the book: ");
+            string isbn;
+            var book = new Book();
+            do
+            {
+                isbn = Console.ReadLine() ?? string.Empty;
+                book = context.Books.FirstOrDefault(x => x.ISBN == isbn);
+                if(book != null) {
+                Console.Write("Please use another ISBN, this one is already assigned to the book:\n");
+                Console.WriteLine(book.ToString());
+                }
+            }
+            while (book != null);
 
             Console.Write("Enter the year published of the book: ");
             int yearPublished;
-            while (!int.TryParse(Console.ReadLine(), out yearPublished)) 
-            Console.WriteLine("Integers only allowed.");
-
+            while (!int.TryParse(Console.ReadLine(), out yearPublished) || yearPublished < 1600 || yearPublished > DateTime.Now.Year)
+            {
+                Console.WriteLine("Please enter a valid year (greater than 1600 and less or equal than the current year).");
+            }
             newBook = new Book(name, author, isbn, yearPublished);
             
             context.Books.Add(newBook);
@@ -324,8 +344,10 @@ namespace LibraryConsole
 
             Console.Write("Enter the new year published of the book: ");
             int yearPublished;
-            while (!int.TryParse(Console.ReadLine(), out yearPublished))
-                Console.WriteLine("Integers only allowed.");
+            while (!int.TryParse(Console.ReadLine(), out yearPublished) || yearPublished <= 1600 || yearPublished >= DateTime.Now.Year)
+            {
+                Console.WriteLine("Please enter a valid year (greater than 1600 and less or equal than the current year).");
+            }
 
             targetBook.Title = title;
             targetBook.Author = author;
@@ -369,25 +391,61 @@ namespace LibraryConsole
 
             Console.WriteLine("Please enter the Author of the book:");
             string authorOfTheBook = Console.ReadLine();
+            //var filteredBooks = await SearchBooksByAuthorAsync(authorOfTheBook);
+            //var filteredBooks = await context.Set<Book>().FromSqlRaw($"EXEC SearchBooksByAuthor @Author = {0}", authorOfTheBook).ToListAsync();
+            //var filteredBooks = await context.Set<BookDto>()
+            //.FromSqlInterpolated($"EXEC SearchBooksByAuthor @Author = {authorOfTheBook}")
+            //.ToListAsync();
 
-            var filteredBooks = await SearchBooksByAuthorAsync(authorOfTheBook);
-
-            if (filteredBooks.Count > 0)
+            var filteredBooks = new List<Book>();
+            try
             {
-                foreach (var book in filteredBooks)
+                using (var command = context.Database.GetDbConnection().CreateCommand())
                 {
-                    Console.WriteLine(book.ToString());
+                    command.CommandText = "SearchBooksByAuthor";
+                    command.CommandType = System.Data.CommandType.StoredProcedure;
+
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = "@Author";
+                    parameter.Value = authorOfTheBook;
+                    command.Parameters.Add(parameter);
+
+                    context.Database.OpenConnection();
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            filteredBooks.Add(new Book
+                            {
+                                Title = reader.GetString(1),
+                                Author = reader.GetString(2),
+                                YearPublished = reader.GetInt32(3),
+                                ISBN = reader.GetString(4),
+                            });
+                        }
+                    }
                 }
             }
-            else
-            {
-                Console.WriteLine("No book was found with this Author!");
+            catch (Exception ex) { 
+                Console.WriteLine("Please check database connection SQL Error");
             }
 
-            Console.WriteLine("Press press enter to continue");
-            Console.ReadLine();
+                if (filteredBooks.Count > 0)
+                {
+                    foreach (var book in filteredBooks)
+                    {
+                        Console.WriteLine(book.ToString());
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("No book was found with this Author!");
+                }
 
-        }
+                Console.WriteLine("Press press enter to continue");
+                Console.ReadLine();
+
+            }
 
         public static async Task<List<Book>> SearchBooksByAuthorAsync(string authorOfTheBook)
         {
@@ -446,7 +504,7 @@ namespace LibraryConsole
             int magazineId;
             while (!int.TryParse(Console.ReadLine(), out magazineId))
                 Console.WriteLine("Integers only allowed.");
-            var magazine = context.Books.Find(magazineId);
+            var magazine = context.Magazines.Find(magazineId);
             if (magazine != null)
             {
                 DBQuerys.InsertBorrowTransaction(context, magazineId);
@@ -486,8 +544,8 @@ namespace LibraryConsole
             int magzineId;
             while (!int.TryParse(Console.ReadLine(), out magzineId))
                 Console.WriteLine("Integers only allowed.");
-            var book = context.Books.Find(magzineId);
-            if (book != null)
+            var magzine = context.Magazines.Find(magzineId);
+            if (magzine != null)
             {
                 DBQuerys.InsertReturnTransaction(context, magzineId);
                 Console.WriteLine("The transaction was succesfully added!");
@@ -584,6 +642,52 @@ namespace LibraryConsole
                 }
                 Console.WriteLine("Press press enter to continue");
                 Console.ReadLine();
+        }
+
+        private static async void ShowBookTransactions() {
+            
+            var bookTransactions = await DBQuerys.GetBookTransactionsAsync<Book>(context);
+            Console.WriteLine("\n\n");
+            foreach (var transaction in bookTransactions)
+            {
+                if (transaction.BorrowDate != null)
+                {
+
+                    Console.WriteLine($"Transaction ID: {transaction.Id},       BookID:{(transaction.LibraryItem as Book).Id}, Book Title: {(transaction.LibraryItem as Book).Title}, Book Author: {(transaction.LibraryItem as Book).Author} Borrow date: {transaction.BorrowDate}");
+
+                }
+                else {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"Transaction ID: {transaction.Id},       BookID:{(transaction.LibraryItem as Book).Id}, Book Title: {(transaction.LibraryItem as Book).Title}, Book Author: {(transaction.LibraryItem as Book).Author} Return date: {transaction.ReturnDate}");
+                    Console.ResetColor();
+                }
+            }
+
+            Console.WriteLine("Press press enter to continue");
+            //Console.ReadLine();
+        }
+
+        private static async void ShowMagazineTransactions()
+        {
+
+            var magazineTransactions = await DBQuerys.GetBookTransactionsAsync<Magazine>(context);
+            Console.WriteLine("\n\n");
+            foreach (var transaction in magazineTransactions)
+            {
+                if (transaction.BorrowDate != null)
+                {
+                    Console.WriteLine($"Transaction ID: {transaction.Id},       MagazineID:{(transaction.LibraryItem as Magazine).Id}, Magazine Title: {(transaction.LibraryItem as Magazine).Title}, Magazine Author: {(transaction.LibraryItem as Magazine).Author} Borrow date: {transaction.BorrowDate}");
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"Transaction ID: {transaction.Id},       MagazineID:{(transaction.LibraryItem as Magazine).Id}, Magazine Title: {(transaction.LibraryItem as Magazine).Title}, Magazine Author: {(transaction.LibraryItem as Magazine).Author} Return date: {transaction.ReturnDate}");
+                    Console.ResetColor();
+                }
+            }
+
+            Console.WriteLine("Press press enter to continue");
+            //Console.ReadLine();
         }
 
         public override bool Equals(object? obj)

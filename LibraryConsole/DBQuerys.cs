@@ -56,6 +56,16 @@ namespace LibraryConsole
 
         }
 
+        public static async Task<List<BorrowTransaction>> GetBookTransactionsAsync<T>(LibraryBookContext context) where T: LibraryItem
+        {
+            var bookTransactions = await context.BorrowTransactions
+                .Include(bt => bt.LibraryItem) // Include related LibraryItem
+                .Where(bt => bt.LibraryItem is T) // Filter for transactions involving books
+                .ToListAsync();
+
+            return bookTransactions;
+        }
+
 
 
     }
