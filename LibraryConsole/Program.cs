@@ -17,13 +17,25 @@ using Microsoft.Extensions.Options;
 //    .Options;
 
 //var builder = WebApplication.CreateBuilder(args);
-var currentDirectory = Directory.GetCurrentDirectory();
-var basePath = Path.Combine(currentDirectory, "..", "..", "..");
+//var currentDirectory = Directory.GetCurrentDirectory();
 
+//var currentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+var currentDirectory = Directory.GetCurrentDirectory();
+var basePath = currentDirectory;
+
+string startupPath = System.IO.Directory.GetCurrentDirectory();
+basePath = Path.Combine(startupPath, "..", "..", "..");
+
+//var basePath = Path.Combine(currentDirectory, "..", "..", "..");
+
+//var basePath = Path.GetFullPath(Path.Combine(currentDirectory, @"..\..\..\"));
 var configuration = new ConfigurationBuilder()
 .SetBasePath(basePath)
 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
 .Build();
+
+
 
 var serviceCollection = new ServiceCollection();
 ConfigureServices(serviceCollection, configuration);

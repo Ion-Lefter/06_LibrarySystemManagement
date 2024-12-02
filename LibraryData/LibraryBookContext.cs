@@ -13,9 +13,9 @@ namespace LibraryData
     public class LibraryBookContext : DbContext
     {
         //may be it is for migration
-        //public LibraryBookContext() : base()
-        //{
-        //}
+        public LibraryBookContext() : base()
+        {
+        }
         public LibraryBookContext(DbContextOptions options) : base(options)
         {
         }
@@ -35,8 +35,13 @@ namespace LibraryData
             var currentDirectory = Directory.GetCurrentDirectory();
             var basePath = Path.Combine(currentDirectory, "..", "..", "..");
 
-            //used only for migration
-            //var basePath = Path.Combine(currentDirectory);
+            string[] args = Environment.GetCommandLineArgs();
+            bool isMigrationAdd = args.Contains("migrations", StringComparer.OrdinalIgnoreCase) &&
+                                  args.Contains("add", StringComparer.OrdinalIgnoreCase);
+
+            if (isMigrationAdd) {
+                basePath = currentDirectory;
+            }
 
             var configuration = new ConfigurationBuilder()
             .SetBasePath(basePath)
